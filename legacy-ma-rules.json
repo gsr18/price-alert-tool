@@ -1,0 +1,9 @@
+﻿[
+  {
+    "id": "LEGACY_MA",
+    "instrument": "INFY",
+    "type": "MA_CROSS",
+    "shortWindow": 1,
+    "longWindow": 2
+  }
+]

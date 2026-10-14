@@ -1,0 +1,9 @@
+﻿[
+  {
+    "id": "NO_ALERT",
+    "instrument": "INFY",
+    "type": "level",
+    "direction": "above",
+    "level": 999999
+  }
+]

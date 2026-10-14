@@ -1,0 +1,8 @@
+﻿[
+  {
+    "id": "LEGACY_LEVEL",
+    "instrument": "INFY",
+    "type": "LEVEL",
+    "threshold": 1500
+  }
+]

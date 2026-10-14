@@ -1,0 +1,16 @@
+[
+  {
+    "date": "2026-01-02",
+    "ruleId": "r1",
+    "instrument": "INFY",
+    "alertType": "LEVEL_DOWN",
+    "description": "INFY crossed below 1500 (from 1501.00 to 1490.00)"
+  },
+  {
+    "date": "2026-01-21",
+    "ruleId": "r2",
+    "instrument": "TCS",
+    "alertType": "MA_BULLISH",
+    "description": "TCS short moving average crossed above long moving average for windows 5/20"
+  }
+]
