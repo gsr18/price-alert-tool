@@ -2,6 +2,12 @@
 
 Java 21 command-line tool that checks historical closing prices for configured level crossings and moving-average crossovers. Alerts report that a rule was met; they do not predict future prices.
 
+## 🚀 Live Demo
+
+🔗 **[Price Alert Studio — Open Live Website](https://gsr18.github.io/price-alert-tool/web/)**
+
+Explore historical price analysis, level-crossing alerts, moving-average crossovers, and interactive visualizations directly in your browser.
+
 ## Prerequisites and run
 
 Install JDK 21 and Maven 3.6.3 or newer. From a clean checkout, open a terminal in the project directory and run:
