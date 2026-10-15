@@ -1,0 +1,10 @@
+date,instrument,close,note
+2026-01-05,ALPHA,7,"last observation"
+2026-01-01,ALPHA,10,"threshold boundary"
+2026-01-04,ALPHA,12,"up move"
+2026-01-02,ALPHA,8,"below move"
+2026-01-03,ALPHA,9,"recovery"
+2026-02-10,BETA,15,"calendar gap"
+2026-02-01,BETA,5,"earlier row"
+2026-03-01,DELTA,1.0000000000000000000000000001,"decimal start"
+2026-03-08,DELTA,1.0000000000000000000000000002,"decimal cross"

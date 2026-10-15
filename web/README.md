@@ -16,17 +16,22 @@ python -m http.server 8000
 
 Open `http://localhost:8000/web/` in a modern browser. To run the browser-engine
 checks, open `http://localhost:8000/web/engine-tests.html`. The page reports
-each built-in assertion and the result of the shared sample fixture.
+each engine and shared-fixture assertion, plus an in-browser workflow for
+uploads, rule editing, analysis, filters, exports, keyboard access, and reset
+confirmation. The workflow checks for page overflow at 320, 375, 430, 768,
+1024, 1440, and 1920 px. These checks run in the selected browser and are
+separate from the Maven/JUnit suite.
+
+The checklist in [`FEATURE_PARITY.md`](FEATURE_PARITY.md) documents Java
+behavior, browser support, verification coverage, and known differences.
 
 ## GitHub Pages
 
 The simplest setup is to publish the repository root: in **Settings → Pages**,
-choose **Deploy from a branch**, select the repository's default branch and
-`/(root)`, then save. The app is available under
-`https://<owner>.github.io/<repository>/web/`. Alternatively, a Pages Actions
-workflow can publish only the `web/` directory as its static artifact; there is
-no build step. All application, sample, and stylesheet references are relative
-so project-site paths are supported.
+the repository's Pages workflow deploys the contents of `web/` to the site
+root. Set **Build and deployment → Source** to **GitHub Actions**. The app is
+then available at `https://<owner>.github.io/<repository>/`. The workflow has no
+build step. All application, sample, and stylesheet references are relative.
 
 ## Sample and parity fixture
 
@@ -50,5 +55,22 @@ fixture used by the browser test page. It can also be supplied with
 - Browser-engine checks run in a browser and do not replace or modify the
   project's JUnit tests. Run the Java suite separately from the repository
   root with `mvn clean test`.
+- User mode is the default, guided workspace. Admin mode reveals local raw
+  JSON/CSV inspection and diagnostics; it is a UI preference, not
+  authentication or a security boundary. Both modes use the same engine and
+  loaded data.
+- The CSV manual editor displays the latest 12 observations for removal.
+  Editing an observation rewrites the CSV using the required date, instrument,
+  and close columns; optional extra source columns are not retained by that
+  editing action. The untouched uploaded CSV remains fully available to
+  analysis until an observation is added or removed.
+- The browser range filters and view sorting change only the visible alert
+  list. CSV alert export contains all computed alerts, not only filtered rows.
+- Shared parity fixtures include multi-instrument and date-ordering cases,
+  both level directions, bullish/bearish MA crossovers, legacy rules, a
+  decimal boundary, insufficient MA history, and a no-alert case. The fixture
+  test checks the browser engine against the shared expected outputs; the
+  Java CLI comparison is a separate reproducible check documented in
+  `FEATURE_PARITY.md`.
 - This is historical rule evaluation, not a live feed, price prediction, or
   investment recommendation.

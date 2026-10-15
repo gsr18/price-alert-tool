@@ -35,13 +35,13 @@ mvn test -DtestGroups=validation
 mvn test -DtestGroups=cli
 ```
 
-On Windows, run `.\test-runner.ps1` in PowerShell for User and Admin / Developer workspaces, sample scenarios, custom files, test reports, and logs. Developer options use a local convenience passkey; it is not a security boundary.
+On Windows, run `.\test-runner.ps1` in PowerShell for User and Admin / Developer workspaces, sample scenarios, custom files, test reports, and logs. Any local passkey in that CLI runner is a convenience prompt, not authentication or a security boundary.
 
 ## Browser demonstration
 
-The separate static **Price Alert Studio** is in `web/`. Start a local server from the repository root with `python -m http.server 8000`, then open `http://localhost:8000/`; the root page redirects to `web/`. You can also open `http://localhost:8000/web/` directly. The GitHub Pages workflow publishes the contents of `web/` at the site root, so the site URL is `https://gsr18.github.io/price-alert-tool/`.
+The separate static **Price Alert Studio** is in `web/`. It offers guided price/rule inputs, local analysis, alert filtering, chart inspection, and exports. User mode is the default; Admin mode exposes local diagnostics and raw input tools but is only a UI preference, not authentication. Both modes use the same browser engine. Start a local server from the repository root with `python -m http.server 8000`, then open `http://localhost:8000/`; the root page redirects to `web/`. You can also open `http://localhost:8000/web/` directly. The GitHub Pages workflow publishes the contents of `web/` at the site root, so the expected site URL is `https://gsr18.github.io/price-alert-tool/`.
 
-To enable deployment, open **Settings → Pages** and set **Build and deployment → Source** to **GitHub Actions**. The workflow deploys on pushes to `main` and can also be started manually from the repository's **Actions** tab. It publishes only `web/`; the root redirect remains in the repository but is not needed for the deployed site. The site runs its own browser-side implementation; the Java CLI and Maven tests remain separate. Deployment has not been performed as part of this change. See [`web/README.md`](web/README.md) for local test instructions and limitations.
+To enable deployment, open **Settings → Pages** and set **Build and deployment → Source** to **GitHub Actions**. The workflow deploys on pushes to `main` and can also be started manually from the repository's **Actions** tab. It publishes only `web/`; the root redirect remains in the repository but is not needed for the deployed site. The site runs its own browser-side implementation; the Java CLI and Maven tests remain separate. See [`web/README.md`](web/README.md) and [`web/FEATURE_PARITY.md`](web/FEATURE_PARITY.md) for test instructions, behavior, and limitations.
 
 ## AI assistance
 

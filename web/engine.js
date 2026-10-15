@@ -46,6 +46,10 @@ function compareDecimal(left, right) {
   return a < b ? -1 : a > b ? 1 : 0;
 }
 
+function compareText(left, right) {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
 function addDecimal(left, right) {
   const [a, b, scale] = alignDecimals(left, right);
   return decimalFromParts(a + b, scale);
@@ -445,8 +449,8 @@ export function runAnalysis(prices, rules) {
       previousComparison = currentComparison;
     }
   }
-  alerts.sort((left, right) => left.date.localeCompare(right.date) ||
-    left.ruleId.localeCompare(right.ruleId));
+  alerts.sort((left, right) => compareText(left.date, right.date) ||
+    compareText(left.ruleId, right.ruleId));
   return alerts;
 }
 

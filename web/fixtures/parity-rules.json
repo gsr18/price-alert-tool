@@ -1,0 +1,12 @@
+[
+  {"id":"level-up","instrument":"ALPHA","type":"level","direction":"above","level":10},
+  {"id":"level-down","instrument":"ALPHA","type":"LEVEL","direction":"BELOW","level":10},
+  {"id":"legacy-level","instrument":"ALPHA","type":"level","threshold":8},
+  {"id":"ma-up","instrument":"ALPHA","type":"ma_cross","direction":"above","short":1,"long":2},
+  {"id":"ma-down","instrument":"ALPHA","type":"ma_cross","direction":"below","short":1,"long":2},
+  {"id":"ma-insufficient","instrument":"ALPHA","type":"ma_cross","shortWindow":2,"longWindow":8},
+  {"id":"beta-gap","instrument":"BETA","type":"level","direction":"above","level":10},
+  {"id":"decimal-level","instrument":"DELTA","type":"level","direction":"above","level":1.00000000000000000000000000015},
+  {"id":"A-case-order","instrument":"ALPHA","type":"level","direction":"above","level":10},
+  {"id":"a-case-order","instrument":"ALPHA","type":"level","direction":"above","level":10}
+]

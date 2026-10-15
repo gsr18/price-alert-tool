@@ -1,0 +1,79 @@
+[
+  {
+    "date": "2026-01-02",
+    "ruleId": "level-down",
+    "instrument": "ALPHA",
+    "alertType": "LEVEL_DOWN",
+    "description": "ALPHA crossed below 10 (from 10 to 8)"
+  },
+  {
+    "date": "2026-01-03",
+    "ruleId": "legacy-level",
+    "instrument": "ALPHA",
+    "alertType": "LEVEL_UP",
+    "description": "ALPHA crossed above 8 (from 8 to 9)"
+  },
+  {
+    "date": "2026-01-03",
+    "ruleId": "ma-up",
+    "instrument": "ALPHA",
+    "alertType": "MA_BULLISH",
+    "description": "ALPHA short moving average crossed above long moving average for windows 1/2"
+  },
+  {
+    "date": "2026-01-04",
+    "ruleId": "A-case-order",
+    "instrument": "ALPHA",
+    "alertType": "LEVEL_UP",
+    "description": "ALPHA crossed above 10 (from 9 to 12)"
+  },
+  {
+    "date": "2026-01-04",
+    "ruleId": "a-case-order",
+    "instrument": "ALPHA",
+    "alertType": "LEVEL_UP",
+    "description": "ALPHA crossed above 10 (from 9 to 12)"
+  },
+  {
+    "date": "2026-01-04",
+    "ruleId": "level-up",
+    "instrument": "ALPHA",
+    "alertType": "LEVEL_UP",
+    "description": "ALPHA crossed above 10 (from 9 to 12)"
+  },
+  {
+    "date": "2026-01-05",
+    "ruleId": "legacy-level",
+    "instrument": "ALPHA",
+    "alertType": "LEVEL_DOWN",
+    "description": "ALPHA crossed below 8 (from 12 to 7)"
+  },
+  {
+    "date": "2026-01-05",
+    "ruleId": "level-down",
+    "instrument": "ALPHA",
+    "alertType": "LEVEL_DOWN",
+    "description": "ALPHA crossed below 10 (from 12 to 7)"
+  },
+  {
+    "date": "2026-01-05",
+    "ruleId": "ma-down",
+    "instrument": "ALPHA",
+    "alertType": "MA_BEARISH",
+    "description": "ALPHA short moving average crossed below long moving average for windows 1/2"
+  },
+  {
+    "date": "2026-02-10",
+    "ruleId": "beta-gap",
+    "instrument": "BETA",
+    "alertType": "LEVEL_UP",
+    "description": "BETA crossed above 10 (from 5 to 15)"
+  },
+  {
+    "date": "2026-03-08",
+    "ruleId": "decimal-level",
+    "instrument": "DELTA",
+    "alertType": "LEVEL_UP",
+    "description": "DELTA crossed above 1.00000000000000000000000000015 (from 1.0000000000000000000000000001 to 1.0000000000000000000000000002)"
+  }
+]

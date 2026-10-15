@@ -6,6 +6,7 @@ import {
   runAnalysis
 } from "./engine.js";
 import { alertsToCsv } from "./export.js";
+import { rulesToJson } from "./rule-format.js";
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 const state = {
@@ -13,12 +14,18 @@ const state = {
   rules: null,
   pricesFile: null,
   rulesFile: null,
+  pricesText: "",
+  rulesText: "",
   alerts: null,
   selectedAlertKey: null,
   search: "",
+  instrument: "",
   type: "",
+  dateFrom: "",
+  dateTo: "",
   sort: "date",
-  sortDirection: 1
+  sortDirection: 1,
+  mode: "user"
 };
 
 const byId = (id) => document.getElementById(id);
@@ -74,8 +81,12 @@ function clearResults() {
   byId("alert-table-wrap").hidden = false;
   byId("result-visible-count").textContent = "No result set";
   byId("export-alerts").disabled = true;
+  byId("copy-alert").disabled = true;
   byId("type-breakdown").textContent = "No computed alerts yet.";
   byId("alert-detail").textContent = "Select an alert row to inspect the rule and observed values.";
+  byId("alert-instrument").replaceChildren(new Option("All instruments", ""));
+  byId("alert-type").replaceChildren(new Option("All types", ""));
+  byId("chart-point-detail").textContent = "Select a chart point to inspect its date and close.";
   renderChart();
 }
 
@@ -84,6 +95,237 @@ function updateOverview() {
   byId("overview-instruments").textContent = String(instruments.size);
   byId("overview-observations").textContent = String(state.prices?.length || 0);
   byId("overview-rules").textContent = String(state.rules?.length || 0);
+}
+
+function csvCell(value) {
+  return `"${String(value).replaceAll('"', '""')}"`;
+}
+
+function pricesToCsv(prices) {
+  return ["date,instrument,close", ...prices.map((record) =>
+    [record.date, record.instrument, formatDecimal(record.close)].map(csvCell).join(","))]
+    .join("\r\n");
+}
+
+function downloadText(filename, text, type) {
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+function applyRulesText(text) {
+  const rules = parseRules(text);
+  state.rules = rules;
+  state.rulesText = text;
+  state.rulesFile = new File([text], "edited-rules.json", { type: "application/json" });
+  fileInputs.rules.input.value = "";
+  setSelectedFile("rules", state.rulesFile);
+  byId("raw-rules").value = text;
+  setFileError("rules", "");
+  byId("raw-rules-error").textContent = "";
+  updatePreviews();
+  updateOverview();
+  renderRuleManager();
+  clearResults();
+  byId("analysis-message").textContent = "Rules validated and applied. Run analysis to compute results.";
+  byId("analysis-message").className = "analysis-message";
+}
+
+function renderRuleManager() {
+  const cards = byId("rule-cards");
+  cards.replaceChildren();
+  const rules = state.rules || [];
+  byId("rules-empty").hidden = rules.length > 0;
+  rules.forEach((rule) => {
+    const card = document.createElement("article");
+    card.className = "panel rule-card";
+    const head = document.createElement("div");
+    head.className = "rule-card-head";
+    const title = document.createElement("h3");
+    title.textContent = rule.id;
+    const kind = document.createElement("span");
+    kind.className = "alert-type-pill";
+    kind.textContent = rule.type === "LEVEL" ? "LEVEL" : "MA_CROSS";
+    head.append(title, kind);
+    const definition = document.createElement("p");
+    definition.textContent = normalizedRuleLabel(rule);
+    const actions = document.createElement("div");
+    actions.className = "rule-card-actions";
+    for (const [action, label] of [["edit", "Edit"], ["duplicate", "Duplicate"], ["delete", "Delete"]]) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = action === "delete" ? "button button-quiet" : "button button-secondary";
+      button.dataset.ruleAction = action;
+      button.dataset.ruleId = rule.id;
+      button.textContent = label;
+      actions.append(button);
+    }
+    card.append(head, definition, actions);
+    cards.append(card);
+  });
+}
+
+function openRuleDialog(rule = null, duplicate = false) {
+  const dialog = byId("rule-dialog");
+  const form = byId("rule-form");
+  form.reset();
+  form.elements.originalId.value = rule && !duplicate ? rule.id : "";
+  form.elements.id.value = rule ? rule.id : "";
+  if (duplicate && rule) {
+    const base = `${rule.id}-copy`;
+    let candidate = base;
+    let index = 2;
+    while ((state.rules || []).some((entry) => entry.id === candidate)) {
+      candidate = `${base}-${index}`;
+      index += 1;
+    }
+    form.elements.id.value = candidate;
+  }
+  form.elements.instrument.value = rule ? rule.instrument : "";
+  form.elements.type.value = rule ? rule.type : "LEVEL";
+  form.elements.direction.value = rule?.direction?.toLowerCase() || "";
+  form.elements.level.value = rule?.type === "LEVEL" ? formatDecimal(rule.threshold) : "";
+  form.elements.short.value = rule?.type === "MA_CROSS" ? rule.shortWindow : "";
+  form.elements.long.value = rule?.type === "MA_CROSS" ? rule.longWindow : "";
+  byId("rule-dialog-title").textContent = rule && !duplicate ? "Edit alert rule"
+    : duplicate ? "Duplicate alert rule" : "Create alert rule";
+  byId("rule-form-error").textContent = "";
+  updateRuleFields();
+  dialog.showModal();
+  form.elements.id.focus();
+}
+
+function updateRuleFields() {
+  const isLevel = byId("rule-form").elements.type.value === "LEVEL";
+  document.querySelector(".level-fields").hidden = !isLevel;
+  document.querySelector(".ma-fields").hidden = isLevel;
+  byId("rule-form").elements.level.required = isLevel;
+  byId("rule-form").elements.short.required = !isLevel;
+  byId("rule-form").elements.long.required = !isLevel;
+}
+
+function saveRuleFromForm(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const id = form.elements.id.value.trim();
+  const originalId = form.elements.originalId.value;
+  try {
+    const type = form.elements.type.value;
+    const fields = [
+      `"id":${JSON.stringify(id)}`,
+      `"instrument":${JSON.stringify(form.elements.instrument.value.trim())}`,
+      `"type":${JSON.stringify(type.toLowerCase())}`
+    ];
+    if (form.elements.direction.value) {
+      fields.push(`"direction":${JSON.stringify(form.elements.direction.value)}`);
+    }
+    if (type === "LEVEL") fields.push(`"level":${form.elements.level.value}`);
+    else fields.push(`"short":${form.elements.short.value}`, `"long":${form.elements.long.value}`);
+    const newRule = parseRules(`[{${fields.join(",")}}]`)[0];
+    const edited = [...(state.rules || [])];
+    const oldIndex = originalId ? edited.findIndex((rule) => rule.id === originalId) : -1;
+    if (oldIndex >= 0) edited.splice(oldIndex, 1, newRule);
+    else edited.push(newRule);
+    applyRulesText(rulesToJson(edited));
+    byId("rule-dialog").close();
+  } catch (error) {
+    byId("rule-form-error").textContent = error.message;
+  }
+}
+
+function handleRuleAction(event) {
+  const button = event.target.closest("[data-rule-action]");
+  if (!button) return;
+  const rule = (state.rules || []).find((entry) => entry.id === button.dataset.ruleId);
+  if (!rule) return;
+  if (button.dataset.ruleAction === "edit") openRuleDialog(rule);
+  else if (button.dataset.ruleAction === "duplicate") openRuleDialog(rule, true);
+  else if (window.confirm(`Delete rule "${rule.id}"?`)) {
+    applyRulesText(rulesToJson((state.rules || []).filter((entry) => entry.id !== rule.id)));
+  }
+}
+
+function renderObservationList() {
+  const list = byId("observation-list");
+  list.replaceChildren();
+  const records = state.prices || [];
+  const visible = records.slice(-12).reverse();
+  visible.forEach((record) => {
+    const item = document.createElement("div");
+    item.className = "observation-item";
+    const text = document.createElement("span");
+    text.textContent = `${record.date} · ${record.instrument} · ${formatDecimal(record.close)}`;
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.textContent = "Remove";
+    remove.setAttribute("aria-label", `Remove ${record.instrument} observation on ${record.date}`);
+    remove.addEventListener("click", () => {
+      replacePrices(records.filter((entry) =>
+        !(entry.date === record.date && entry.instrument === record.instrument)));
+    });
+    item.append(text, remove);
+    list.append(item);
+  });
+}
+
+function replacePrices(records) {
+  try {
+    const text = pricesToCsv(records);
+    state.prices = parsePrices(text);
+    state.pricesText = text;
+    state.pricesFile = new File([text], "edited-prices.csv", { type: "text/csv" });
+    fileInputs.prices.input.value = "";
+    setSelectedFile("prices", state.pricesFile);
+    updatePreviews();
+    updateOverview();
+    renderObservationList();
+    updateAdvancedPreview();
+    clearResults();
+    byId("analysis-message").textContent = "Price observations updated. Run analysis to recompute results.";
+    byId("analysis-message").className = "analysis-message";
+  } catch (error) {
+    byId("analysis-message").textContent = error.message;
+    byId("analysis-message").className = "analysis-message error";
+  }
+}
+
+function updateAdvancedPreview() {
+  byId("raw-csv-preview").value = state.pricesText || "No prices loaded.";
+  if (!byId("raw-rules").value && state.rulesText) byId("raw-rules").value = state.rulesText;
+}
+
+function setMode(mode) {
+  state.mode = mode;
+  document.documentElement.dataset.mode = mode;
+  const button = byId("mode-toggle");
+  button.textContent = mode === "admin" ? "Admin mode" : "User mode";
+  button.setAttribute("aria-pressed", String(mode === "admin"));
+  button.title = mode === "admin"
+    ? "Admin mode reveals advanced local tools; it is not a security boundary."
+    : "Switch to local advanced-workspace mode.";
+}
+
+const pageDescriptions = {
+  overview: ["Overview", "Load historical observations and transparent rules to find verifiable signals."],
+  data: ["Data / Inputs", "Select, inspect, and edit the price observations and rules for analysis."],
+  rules: ["Rules", "Create, duplicate, edit, or remove historical alert conditions."],
+  analysis: ["Analysis / Results", "Run the local engine, filter computed alerts, and inspect the source observations."],
+  about: ["About / Help", "Understand the local browser implementation, limitations, and historical-alert disclaimer."]
+};
+
+function updateNavigation() {
+  const section = location.hash.slice(1) in pageDescriptions ? location.hash.slice(1) : "overview";
+  const [title, description] = pageDescriptions[section];
+  byId("page-title").textContent = title;
+  byId("page-description").textContent = description;
+  document.title = `${title} · Price Alert Studio`;
+  document.querySelectorAll("[data-nav]").forEach((link) => {
+    if (link.dataset.nav === section) link.setAttribute("aria-current", "page");
+    else link.removeAttribute("aria-current");
+  });
 }
 
 function setSelectedFile(kind, file) {
@@ -98,6 +340,7 @@ function setSelectedFile(kind, file) {
   container.hidden = false;
   const name = document.createElement("span");
   name.textContent = `${file.name} · ${formatBytes(file.size)}`;
+  name.title = file.name;
   const remove = document.createElement("button");
   remove.type = "button";
   remove.setAttribute("aria-label", `Remove ${file.name}`);
@@ -105,10 +348,14 @@ function setSelectedFile(kind, file) {
   remove.addEventListener("click", () => {
     fileInputs[kind].input.value = "";
     state[kind] = null;
+    state[`${kind}Text`] = "";
     setSelectedFile(kind, null);
     setFileError(kind, "");
     updatePreviews();
     updateOverview();
+    renderRuleManager();
+    renderObservationList();
+    updateAdvancedPreview();
     clearResults();
   });
   container.append(name, remove);
@@ -129,7 +376,9 @@ async function readSelectedFile(kind, file) {
   } else {
     try {
       const text = await file.text();
+      state[`${kind}Text`] = text;
       state[kind] = kind === "prices" ? parsePrices(text) : parseRules(text);
+      if (kind === "rules") byId("raw-rules").value = text;
       byId("analysis-message").textContent = "";
       byId("analysis-message").className = "analysis-message";
     } catch (error) {
@@ -138,6 +387,9 @@ async function readSelectedFile(kind, file) {
   }
   updatePreviews();
   updateOverview();
+  renderRuleManager();
+  renderObservationList();
+  updateAdvancedPreview();
 }
 
 function renderPricePreview() {
@@ -193,6 +445,7 @@ function updatePreviews() {
     ? `${state.prices.length} observations and ${state.rules.length} rules are ready.`
     : "Load both valid files to preview your analysis.";
   byId("input-status").classList.toggle("ready", ready && !hasErrors);
+  byId("download-rules").disabled = state.rules === null;
 }
 
 function instrumentDateRange(prices) {
@@ -210,9 +463,17 @@ function filteredAlerts() {
   const search = state.search.trim().toLocaleLowerCase();
   return state.alerts.filter((alert) =>
     (!search || alert.instrument.toLocaleLowerCase().includes(search) ||
-      alert.ruleId.toLocaleLowerCase().includes(search)) &&
-    (!state.type || alert.alertType === state.type)
+      alert.ruleId.toLocaleLowerCase().includes(search) ||
+      alert.description.toLocaleLowerCase().includes(search)) &&
+    (!state.type || alert.alertType === state.type) &&
+    (!state.instrument || alert.instrument === state.instrument) &&
+    (!state.dateFrom || alert.date >= state.dateFrom) &&
+    (!state.dateTo || alert.date <= state.dateTo)
   );
+}
+
+function compareDisplayText(left, right) {
+  return left < right ? -1 : left > right ? 1 : 0;
 }
 
 function renderAlerts() {
@@ -221,12 +482,13 @@ function renderAlerts() {
   const rows = filteredAlerts();
   if (state.sort !== "date") {
     rows.sort((left, right) =>
-      String(left[state.sort]).localeCompare(String(right[state.sort])) * state.sortDirection ||
-      left.date.localeCompare(right.date) || left.ruleId.localeCompare(right.ruleId)
+      compareDisplayText(String(left[state.sort]), String(right[state.sort])) * state.sortDirection ||
+      compareDisplayText(left.date, right.date) || compareDisplayText(left.ruleId, right.ruleId)
     );
   } else if (state.sortDirection < 0) {
     rows.reverse();
   }
+  const originalRows = [...rows];
   rows.forEach((alert) => {
     const row = document.createElement("tr");
     row.tabIndex = 0;
@@ -264,13 +526,21 @@ function renderAlerts() {
   });
   const hasResult = state.alerts !== null;
   const hasAlerts = hasResult && state.alerts.length > 0;
+  const hasMatches = rows.length > 0;
+  if (state.selectedAlertKey && !rows.some((alert) => alertKey(alert) === state.selectedAlertKey)) {
+    state.selectedAlertKey = null;
+    byId("alert-detail").textContent = hasResult && hasAlerts
+      ? "The selected alert is hidden by the current filters."
+      : "Select a result row to inspect its rule and observations.";
+    byId("copy-alert").disabled = true;
+  }
   byId("results-placeholder").hidden = hasResult;
   byId("no-alerts").hidden = !hasResult || hasAlerts;
-  byId("no-matches").hidden = !hasAlerts || rows.length > 0;
+  byId("no-matches").hidden = !hasAlerts || hasMatches;
   byId("alert-table-wrap").hidden = !hasResult;
-  byId("alert-table").hidden = !hasAlerts;
+  byId("alert-table").hidden = !hasMatches;
   byId("result-visible-count").textContent = hasAlerts
-    ? `Showing ${rows.length} of ${state.alerts.length} alerts` : hasResult ? "0 alerts" : "No result set";
+    ? `Showing ${originalRows.length} of ${state.alerts.length} alerts` : hasResult ? "0 alerts" : "No result set";
 }
 
 function renderAlertDetail(alert) {
@@ -319,6 +589,7 @@ function renderAlertDetail(alert) {
     wrapper.append(note);
   }
   target.append(wrapper);
+  byId("copy-alert").disabled = false;
 }
 
 function renderBreakdown() {
@@ -389,9 +660,27 @@ function drawLineChart(svg, records, matchingAlerts) {
         index === Math.floor((records.length - 1) / 2)) {
       add("text", { x: x(index) - 21, y: height - 7 }, record.date.slice(5));
     }
-    if (alertDates.has(record.date)) {
-      add("circle", { cx: x(index), cy: y(values[index]), r: 5, class: "chart-alert-dot" });
-    }
+    const isAlertDate = alertDates.has(record.date);
+    const marker = add("circle", {
+      cx: x(index), cy: y(values[index]), r: isAlertDate ? 5 : 3,
+      class: isAlertDate ? "chart-alert-dot" : "chart-point",
+      tabindex: 0, role: "button",
+      "aria-label": `${record.date}, close ${formatDecimal(record.close)}${isAlertDate ? ", alert date" : ""}`
+    });
+    const showPoint = () => {
+      byId("chart-point-detail").textContent =
+        `${record.date} · ${record.instrument} · close ${formatDecimal(record.close)}${isAlertDate ? " · alert triggered" : ""}`;
+    };
+    marker.addEventListener("click", showPoint);
+    marker.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        showPoint();
+      }
+    });
+    const title = document.createElementNS(namespace, "title");
+    title.textContent = `${record.date}: ${formatDecimal(record.close)}${isAlertDate ? " (alert date)" : ""}`;
+    marker.append(title);
   });
 }
 
@@ -402,7 +691,10 @@ function renderChart() {
     select.replaceChildren(new Option("Select instrument", ""));
     select.disabled = true;
     byId("chart-description").textContent = "Choose an instrument after loading price observations.";
-    area.innerHTML = '<div class="chart-placeholder">Actual price observations<br>will be charted here</div>';
+    const placeholder = document.createElement("div");
+    placeholder.className = "chart-placeholder";
+    placeholder.textContent = "Historical closes will appear here.";
+    area.replaceChildren(placeholder);
     return;
   }
   const instruments = [...new Set(state.prices.map((record) => record.instrument))].sort();
@@ -416,7 +708,10 @@ function renderChart() {
   byId("chart-description").textContent = `${records.length} chronological observations · ${relatedAlerts.length} alert dates`;
   area.replaceChildren();
   if (records.length < 2) {
-    area.innerHTML = '<div class="chart-placeholder">At least two observations<br>are needed to draw a line.</div>';
+    const placeholder = document.createElement("div");
+    placeholder.className = "chart-placeholder";
+    placeholder.textContent = "At least two observations are needed to draw a line.";
+    area.replaceChildren(placeholder);
     return;
   }
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -425,7 +720,20 @@ function renderChart() {
   svg.setAttribute("role", "img");
   svg.setAttribute("aria-label", `${current} historical close prices with alert dates marked`);
   const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
-  defs.innerHTML = '<linearGradient id="chartFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="var(--accent)" stop-opacity=".20"/><stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/></linearGradient>';
+  const gradient = document.createElementNS("http://www.w3.org/2000/svg", "linearGradient");
+  gradient.id = "chartFill";
+  gradient.setAttribute("x1", "0");
+  gradient.setAttribute("x2", "0");
+  gradient.setAttribute("y1", "0");
+  gradient.setAttribute("y2", "1");
+  [["0%", ".20"], ["100%", "0"]].forEach(([offset, opacity]) => {
+    const stop = document.createElementNS("http://www.w3.org/2000/svg", "stop");
+    stop.setAttribute("offset", offset);
+    stop.setAttribute("stop-color", "var(--accent)");
+    stop.setAttribute("stop-opacity", opacity);
+    gradient.append(stop);
+  });
+  defs.append(gradient);
   svg.append(defs);
   drawLineChart(svg, records, relatedAlerts);
   area.replaceChildren(svg);
@@ -444,12 +752,23 @@ function showAnalysis(alerts) {
   byId("results-caption").textContent = `${state.prices.length} observations evaluated against ${state.rules.length} validated rules.`;
   byId("export-alerts").disabled = false;
   const alertTypes = [...new Set(alerts.map((alert) => alert.alertType))].sort();
+  const alertInstruments = [...new Set(alerts.map((alert) => alert.instrument))].sort();
+  byId("alert-instrument").replaceChildren(
+    new Option("All instruments", ""),
+    ...alertInstruments.map((instrument) => new Option(instrument, instrument))
+  );
   byId("alert-type").replaceChildren(
     new Option("All alert types", ""),
     ...alertTypes.map((type) => new Option(type, type))
   );
   state.type = "";
+  state.instrument = "";
+  state.dateFrom = "";
+  state.dateTo = "";
+  byId("alert-instrument").value = "";
   byId("alert-type").value = "";
+  byId("alert-date-from").value = "";
+  byId("alert-date-to").value = "";
   byId("analysis-message").textContent = alerts.length
     ? `Complete · ${alerts.length} historical ${alerts.length === 1 ? "signal" : "signals"} found.`
     : "Complete · no configured conditions occurred in this historical data.";
@@ -487,12 +806,18 @@ async function loadSamples() {
     ]);
     state.prices = parsePrices(pricesText);
     state.rules = parseRules(rulesText);
+    state.pricesText = pricesText;
+    state.rulesText = rulesText;
+    byId("raw-rules").value = rulesText;
     setFileError("prices", "");
     setFileError("rules", "");
     setSelectedFile("prices", new File([pricesText], "sample-prices.csv", { type: "text/csv" }));
     setSelectedFile("rules", new File([rulesText], "sample-rules.json", { type: "application/json" }));
     updatePreviews();
     updateOverview();
+    renderRuleManager();
+    renderObservationList();
+    updateAdvancedPreview();
     clearResults();
     byId("analysis-message").textContent = "Sample data loaded. Run analysis to calculate its alerts.";
     byId("analysis-message").className = "analysis-message";
@@ -508,10 +833,14 @@ async function handleFile(kind, file) {
   if (file.size > MAX_FILE_BYTES) {
     clearResults();
     state[kind] = null;
+    state[`${kind}Text`] = "";
     setSelectedFile(kind, file);
     setFileError(kind, "This file is larger than 5 MB. Choose a smaller file.");
     updatePreviews();
     updateOverview();
+    renderRuleManager();
+    renderObservationList();
+    updateAdvancedPreview();
     return;
   }
   await readSelectedFile(kind, file);
@@ -541,8 +870,10 @@ function bindUpload(kind) {
 }
 
 function resetData() {
+  if (!window.confirm("Reset all loaded files, rules, observations, and results?")) return;
   for (const kind of ["prices", "rules"]) {
     state[kind] = null;
+    state[`${kind}Text`] = "";
     state[`${kind}File`] = null;
     fileInputs[kind].input.value = "";
     setSelectedFile(kind, null);
@@ -550,9 +881,90 @@ function resetData() {
   }
   updatePreviews();
   updateOverview();
+  byId("raw-rules").value = "";
+  byId("raw-rules-error").textContent = "";
+  renderRuleManager();
+  renderObservationList();
+  updateAdvancedPreview();
   clearResults();
   byId("analysis-message").textContent = "Workspace cleared.";
   byId("analysis-message").className = "analysis-message";
+}
+
+function addObservation(event) {
+  event.preventDefault();
+  if (!state.prices) {
+    byId("analysis-message").textContent = "Load a valid prices CSV before adding an observation.";
+    byId("analysis-message").className = "analysis-message error";
+    return;
+  }
+  const form = event.currentTarget;
+  const values = new FormData(form);
+  const nextCsv = `${pricesToCsv(state.prices)}\r\n${[
+    values.get("date"), values.get("instrument"), values.get("close")
+  ].map(csvCell).join(",")}`;
+  try {
+    replacePrices(parsePrices(nextCsv));
+    form.reset();
+  } catch (error) {
+    byId("analysis-message").textContent = error.message;
+    byId("analysis-message").className = "analysis-message error";
+  }
+}
+
+function downloadRules() {
+  if (!state.rules) return;
+  downloadText("price-alert-rules.json", rulesToJson(state.rules), "application/json;charset=utf-8");
+}
+
+function downloadDiagnostics() {
+  const report = {
+    generatedAt: new Date().toISOString(),
+    mode: state.mode,
+    input: {
+      pricesFile: state.pricesFile?.name || null,
+      rulesFile: state.rulesFile?.name || null,
+      validPriceObservations: state.prices?.length ?? null,
+      validRules: state.rules?.length ?? null,
+      priceError: byId("prices-error").textContent || null,
+      rulesError: byId("rules-error").textContent || null,
+      analysisError: byId("analysis-message").classList.contains("error")
+        ? byId("analysis-message").textContent : null
+    },
+    results: state.alerts === null ? null : {
+      alertCount: state.alerts.length,
+      alerts: state.alerts.map(({ date, ruleId, instrument, alertType, description }) =>
+        ({ date, ruleId, instrument, alertType, description }))
+    },
+    browserLimits: {
+      maxFileBytes: MAX_FILE_BYTES,
+      maxPriceRows: 100000,
+      maxDecimalScale: 10000
+    }
+  };
+  downloadText("price-alert-diagnostics.json", JSON.stringify(report, null, 2),
+    "application/json;charset=utf-8");
+}
+
+async function copySelectedAlert() {
+  const alert = state.alerts?.find((entry) => alertKey(entry) === state.selectedAlertKey);
+  if (!alert) return;
+  const summary = [
+    `${alert.alertType} · ${alert.date}`,
+    `Rule ${alert.ruleId} · ${alert.instrument}`,
+    alert.description,
+    alert.rule.type === "LEVEL"
+      ? `Previous ${formatDecimal(alert.previous.close)} · Level ${formatDecimal(alert.rule.threshold)} · Current ${formatDecimal(alert.current.close)}`
+      : `Adjacent observations: ${alert.previous.date} ${formatDecimal(alert.previous.close)} → ${alert.current.date} ${formatDecimal(alert.current.close)}`
+  ].join("\n");
+  try {
+    await navigator.clipboard.writeText(summary);
+    byId("analysis-message").textContent = "Selected alert details copied.";
+    byId("analysis-message").className = "analysis-message success";
+  } catch {
+    byId("analysis-message").textContent = "Clipboard access is unavailable. Select the alert details and copy them manually.";
+    byId("analysis-message").className = "analysis-message error";
+  }
 }
 
 function bindControls() {
@@ -560,6 +972,31 @@ function bindControls() {
     applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"));
   byId("load-sample").addEventListener("click", loadSamples);
   byId("reset-data").addEventListener("click", resetData);
+  byId("mode-toggle").addEventListener("click", () =>
+    setMode(state.mode === "user" ? "admin" : "user"));
+  byId("create-rule").addEventListener("click", () => openRuleDialog());
+  document.querySelector("[data-create-rule]").addEventListener("click", () => openRuleDialog());
+  byId("rule-cards").addEventListener("click", handleRuleAction);
+  byId("rule-form").addEventListener("submit", saveRuleFromForm);
+  byId("rule-form").elements.type.addEventListener("change", updateRuleFields);
+  byId("close-rule-dialog").addEventListener("click", () => byId("rule-dialog").close());
+  byId("cancel-rule").addEventListener("click", () => byId("rule-dialog").close());
+  byId("observation-form").addEventListener("submit", addObservation);
+  byId("download-rules").addEventListener("click", downloadRules);
+  byId("apply-raw-rules").addEventListener("click", () => {
+    try {
+      applyRulesText(byId("raw-rules").value);
+    } catch (error) {
+      byId("raw-rules-error").textContent = error.message;
+    }
+  });
+  byId("reset-raw-rules").addEventListener("click", () => {
+    byId("raw-rules").value = state.rulesText;
+    byId("raw-rules-error").textContent = "";
+  });
+  byId("download-diagnostics").addEventListener("click", downloadDiagnostics);
+  byId("copy-alert").addEventListener("click", copySelectedAlert);
+  window.addEventListener("hashchange", updateNavigation);
   byId("run-analysis").addEventListener("click", () => {
     if (!state.prices || !state.rules) {
       byId("analysis-message").textContent = "Choose a valid prices CSV and rules JSON before running analysis.";
@@ -588,11 +1025,29 @@ function bindControls() {
     state.type = event.target.value;
     renderAlerts();
   });
+  byId("alert-instrument").addEventListener("change", (event) => {
+    state.instrument = event.target.value;
+    renderAlerts();
+  });
+  byId("alert-date-from").addEventListener("change", (event) => {
+    state.dateFrom = event.target.value;
+    renderAlerts();
+  });
+  byId("alert-date-to").addEventListener("change", (event) => {
+    state.dateTo = event.target.value;
+    renderAlerts();
+  });
   byId("clear-filters").addEventListener("click", () => {
     state.search = "";
+    state.instrument = "";
     state.type = "";
+    state.dateFrom = "";
+    state.dateTo = "";
     byId("alert-search").value = "";
+    byId("alert-instrument").value = "";
     byId("alert-type").value = "";
+    byId("alert-date-from").value = "";
+    byId("alert-date-to").value = "";
     renderAlerts();
   });
   byId("export-alerts").addEventListener("click", exportAlerts);
@@ -610,7 +1065,12 @@ function bindControls() {
 }
 
 initializeTheme();
+setMode("user");
 bindControls();
 updatePreviews();
 updateOverview();
+renderRuleManager();
+renderObservationList();
+updateAdvancedPreview();
+updateNavigation();
 clearResults();

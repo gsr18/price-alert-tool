@@ -1,29 +1,31 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="dark" data-mode="user">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark light">
-  <meta name="description" content="A local, transparent studio for exploring historical price alert rules.">
-  <title>Price Alert Studio — PayAttention</title>
+  <meta name="description" content="Local, transparent analysis of historical price-alert rules.">
+  <title>Overview · Price Alert Studio</title>
   <link rel="stylesheet" href="./styles.css">
   <script type="module" src="./app.js"></script>
 </head>
 <body>
-  <a class="skip-link" href="#main">Skip to analysis</a>
+  <a class="skip-link" href="#main">Skip to main content</a>
   <header class="topbar">
-    <a class="brand" href="#overview" aria-label="Price Alert Studio home">
-      <span class="brand-mark" aria-hidden="true">
-        <svg viewBox="0 0 36 36"><path d="M5 26.5 13 18l5.5 4.5L30 9.5"/><path d="M23 9.5H30v7"/></svg>
-      </span>
+    <a class="brand" href="#overview" aria-label="Price Alert Studio overview">
+      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 36 36"><path d="M5 26.5 13 18l5.5 4.5L30 9.5"/><path d="M23 9.5H30v7"/></svg></span>
       <span class="brand-copy"><strong>PayAttention</strong><small>Price Alert Studio</small></span>
     </a>
     <nav class="main-nav" aria-label="Main navigation">
-      <a href="#overview">Overview</a><a href="#analysis">Analysis</a>
-      <a href="#rules">Rules</a><a href="#about">About</a>
+      <a href="#overview" data-nav="overview">Overview</a>
+      <a href="#analysis" data-nav="analysis">Analysis</a>
+      <a href="#data" data-nav="data">Data</a>
+      <a href="#rules" data-nav="rules">Rules</a>
+      <a href="#about" data-nav="about">About</a>
     </nav>
     <div class="header-actions">
-      <span class="local-badge"><i></i> Local analysis</span>
+      <span class="local-badge"><i aria-hidden="true"></i> Local only</span>
+      <button id="mode-toggle" class="button button-quiet mode-toggle" type="button" aria-pressed="false">User mode</button>
       <button class="icon-button theme-toggle" type="button" aria-label="Switch to light theme" title="Switch theme">
         <svg class="sun-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.7"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>
         <svg class="moon-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.4 15.2A8.6 8.6 0 0 1 8.8 3.6 8.7 8.7 0 1 0 20.4 15.2Z"/></svg>
@@ -31,158 +33,179 @@
     </div>
   </header>
 
-  <main id="main">
-    <section id="overview" class="hero page-shell" aria-labelledby="hero-title">
-      <div class="hero-copy">
-        <p class="eyebrow"><span class="eyebrow-line"></span> HISTORICAL RULE ANALYSIS</p>
-        <h1 id="hero-title">Understand<br><span>every signal.</span></h1>
-        <p class="hero-description">Explore rule-based events in historical prices. Every alert is traceable to the data point and condition that triggered it.</p>
-        <p class="hero-subtitle">Historical signals. Transparent rules. Verifiable results.</p>
-        <div class="hero-actions">
-          <a class="button button-primary" href="#analysis"><span>Run analysis</span><span aria-hidden="true">↗</span></a>
-          <button id="load-sample" class="button button-secondary" type="button">Load sample data</button>
-        </div>
+  <main id="main" class="app-shell">
+    <div class="page-heading">
+      <div>
+        <p class="eyebrow">HISTORICAL PRICE ANALYSIS</p>
+        <h1 id="page-title">Overview</h1>
+        <p id="page-description">Load historical observations and transparent rules to find verifiable signals.</p>
       </div>
-      <div class="hero-side">
-        <div class="signal-orbit" aria-hidden="true">
-          <div class="orbit-ring ring-one"></div><div class="orbit-ring ring-two"></div>
-          <div class="orbit-core"><svg viewBox="0 0 64 64"><path d="m10 43 12-13 9 7 22-25"/><circle cx="53" cy="12" r="3"/></svg></div>
-          <span class="orbit-tag tag-top">RULE MET</span><span class="orbit-tag tag-bottom">LOCAL · VERIFIED</span>
-        </div>
-        <div class="hero-note"><span class="note-dot"></span><span>Historical conditions,<br>not predictions.</span></div>
+      <div class="heading-actions">
+        <button id="load-sample" class="button button-secondary" type="button">Load sample fixture</button>
+        <a class="button button-primary" href="#data">Start analysis <span aria-hidden="true">→</span></a>
+      </div>
+    </div>
+
+    <section id="overview" class="page-section" aria-labelledby="overview-title">
+      <div class="section-title">
+        <div><p class="eyebrow">CURRENT WORKSPACE</p><h2 id="overview-title">Your data at a glance</h2></div>
+        <p id="overview-state" class="status-note" aria-live="polite">Load files or try the bundled sample.</p>
+      </div>
+      <div class="overview-stats">
+        <article class="stat-card"><span>Instruments</span><strong id="overview-instruments">0</strong><small>Unique price series</small></article>
+        <article class="stat-card"><span>Observations</span><strong id="overview-observations">0</strong><small>Historical closes</small></article>
+        <article class="stat-card"><span>Rules</span><strong id="overview-rules">0</strong><small>Validated conditions</small></article>
+        <article class="stat-card stat-accent"><span>Alerts</span><strong id="overview-alerts">—</strong><small>Latest completed analysis</small></article>
+      </div>
+      <div class="quick-actions">
+        <a class="panel quick-card" href="#data"><span class="quick-number">01</span><span><strong>Load your data</strong><small>Select a CSV and rules JSON pair</small></span><b aria-hidden="true">→</b></a>
+        <a class="panel quick-card" href="#rules"><span class="quick-number">02</span><span><strong>Configure rules</strong><small>Create level and moving-average rules</small></span><b aria-hidden="true">→</b></a>
+        <a class="panel quick-card" href="#analysis"><span class="quick-number">03</span><span><strong>Review signals</strong><small>Filter, inspect and export results</small></span><b aria-hidden="true">→</b></a>
       </div>
     </section>
 
-    <section class="overview-stats page-shell" aria-label="Current data summary">
-      <article class="stat-card"><span class="stat-icon">◎</span><span class="stat-label">Instruments analyzed</span><strong id="overview-instruments">0</strong><small>From loaded observations</small></article>
-      <article class="stat-card"><span class="stat-icon">⌁</span><span class="stat-label">Price observations</span><strong id="overview-observations">0</strong><small>Historical closing values</small></article>
-      <article class="stat-card"><span class="stat-icon">◇</span><span class="stat-label">Rules configured</span><strong id="overview-rules">0</strong><small>Validated conditions</small></article>
-      <article class="stat-card stat-accent"><span class="stat-icon">↗</span><span class="stat-label">Alerts detected</span><strong id="overview-alerts">—</strong><small id="overview-state">Run an analysis to begin</small></article>
+    <section id="data" class="page-section" aria-labelledby="data-title">
+      <div class="section-title">
+        <div><p class="eyebrow">01 / INPUTS</p><h2 id="data-title">Historical data</h2><p>Choose files or load the sample. Everything is parsed locally in this browser.</p></div>
+        <button id="reset-data" class="button button-secondary" type="button">Reset workspace</button>
+      </div>
+      <div class="upload-grid">
+        <article class="panel upload-card">
+          <div class="card-heading"><span class="file-type-icon csv-icon">CSV</span><div><h3>Prices</h3><p>Required columns: date, instrument, close</p></div></div>
+          <label class="drop-zone" id="prices-drop" for="prices-file" tabindex="0">
+            <input id="prices-file" type="file" accept=".csv,text/csv" aria-label="Choose historical prices CSV">
+            <strong>Drop a CSV or browse files</strong><span>ISO date · Instrument · Positive decimal close</span><small>Maximum 5 MB</small>
+          </label>
+          <div class="selected-file" id="prices-selected" hidden></div>
+          <p class="file-error" id="prices-error" role="alert"></p>
+          <a class="inline-link" href="./samples/prices.csv" download>Download sample prices CSV</a>
+        </article>
+        <article class="panel upload-card">
+          <div class="card-heading"><span class="file-type-icon json-icon">{ }</span><div><h3>Alert rules</h3><p>Official and supported legacy JSON schemas</p></div></div>
+          <label class="drop-zone" id="rules-drop" for="rules-file" tabindex="0">
+            <input id="rules-file" type="file" accept=".json,application/json" aria-label="Choose alert rules JSON">
+            <strong>Drop JSON or browse files</strong><span>Level and moving-average conditions</span><small>Maximum 5 MB</small>
+          </label>
+          <div class="selected-file" id="rules-selected" hidden></div>
+          <p class="file-error" id="rules-error" role="alert"></p>
+          <a class="inline-link" href="./samples/rules.json" download>Download sample rules JSON</a>
+        </article>
+      </div>
+      <div class="panel input-summary">
+        <p id="input-status" role="status" aria-live="polite">Select both files to preview and validate them.</p>
+        <div class="button-row"><button id="download-rules" class="button button-secondary" type="button" disabled>Download current rules</button><a class="button button-quiet" href="./samples/prices.csv" download>Download sample prices</a></div>
+      </div>
+      <div class="panel preview-panel">
+        <div class="card-heading"><div><p class="eyebrow">PREVIEW</p><h3>Review parsed inputs</h3></div><span id="preview-count" class="subtle-count">Waiting for valid files</span></div>
+        <div id="preview-empty" class="empty-inline">Validated price rows and normalized rules will appear here.</div>
+        <div id="preview-content" class="preview-grid" hidden>
+          <div><h4>Price observations <span id="price-preview-count"></span></h4><div class="table-scroll preview-scroll"><table><thead><tr><th>Date</th><th>Instrument</th><th class="numeric">Close</th></tr></thead><tbody id="price-preview"></tbody></table></div></div>
+          <div><h4>Rules <span id="rule-preview-count"></span></h4><div id="rule-preview" class="rule-list"></div></div>
+        </div>
+        <div class="panel-actions"><button id="run-analysis" class="button button-primary" type="button" disabled><span id="run-label">Run analysis</span><span aria-hidden="true">→</span></button><span id="analysis-message" class="analysis-message" role="status" aria-live="polite"></span></div>
+      </div>
+      <details id="admin-inputs" class="panel admin-only advanced-panel">
+        <summary>Advanced input diagnostics <span>Admin workspace · local only</span></summary>
+        <div class="advanced-grid">
+          <div><h3>Parsed CSV preview</h3><textarea id="raw-csv-preview" rows="14" readonly>No prices loaded.</textarea></div>
+          <div><label for="raw-rules">Raw JSON rules editor</label><textarea id="raw-rules" rows="14" spellcheck="false" aria-describedby="raw-rules-help"></textarea><p id="raw-rules-help">Changes are applied only after selecting “Validate and apply JSON”.</p><div class="button-row"><button id="apply-raw-rules" class="button button-secondary" type="button">Validate and apply JSON</button><button id="reset-raw-rules" class="button button-quiet" type="button">Reload active rules</button></div><p id="raw-rules-error" class="file-error" role="alert"></p></div>
+        </div>
+        <div class="advanced-actions"><button id="download-diagnostics" class="button button-secondary" type="button">Download diagnostic report</button><span>Browser limits: 5 MB per file · 100,000 price rows · max decimal scale 10,000.</span></div>
+      </details>
+      <section id="manual-data" class="panel user-feature" aria-labelledby="manual-title">
+        <div class="card-heading"><div><p class="eyebrow">OPTIONAL</p><h3 id="manual-title">Add one observation</h3><p>Append an observation to the loaded data without editing CSV manually.</p></div></div>
+        <form id="observation-form" class="form-grid compact-form">
+          <label>Date<input name="date" type="date" required></label>
+          <label>Instrument<input name="instrument" type="text" maxlength="200" required></label>
+          <label>Close<input name="close" type="text" inputmode="decimal" placeholder="e.g. 125.40" required></label>
+          <button class="button button-secondary" type="submit">Add observation</button>
+        </form>
+        <div id="observation-list" class="observation-list"></div>
+      </section>
     </section>
 
-    <section id="analysis" class="workspace-section page-shell" aria-labelledby="analysis-title">
-      <div class="section-heading">
-        <div><p class="eyebrow">YOUR WORKSPACE</p><h2 id="analysis-title">Analysis studio</h2></div>
-        <span class="privacy-inline"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="8.5" width="12" height="9" rx="2"/><path d="M7 8.5V6a3 3 0 0 1 6 0v2.5"/></svg> Files stay on this device</span>
+    <section id="rules" class="page-section" aria-labelledby="rules-title">
+      <div class="section-title">
+        <div><p class="eyebrow">02 / CONFIGURATION</p><h2 id="rules-title">Alert rules</h2><p>Configure rule conditions with a guided form; advanced users can edit the JSON above.</p></div>
+        <button id="create-rule" class="button button-primary" type="button">Create rule</button>
       </div>
-      <div class="workspace-grid">
-        <div class="workspace-main">
-          <section class="panel input-panel" aria-labelledby="inputs-title">
-            <div class="panel-heading">
-              <div><span class="step-number">01</span><div><h3 id="inputs-title">Bring your data</h3><p>Choose historical prices and the rules to evaluate.</p></div></div>
-              <button id="reset-data" class="text-button" type="button">Reset</button>
-            </div>
-            <div class="upload-grid">
-              <div class="upload-card" data-kind="prices">
-                <div class="upload-card-head"><span class="file-type-icon csv-icon">CSV</span><div><h4>Historical prices</h4><p>Comma-separated values</p></div></div>
-                <label class="drop-zone" id="prices-drop" for="prices-file" tabindex="0">
-                  <input id="prices-file" type="file" accept=".csv,text/csv" aria-label="Choose historical prices CSV">
-                  <span class="upload-symbol" aria-hidden="true">↑</span><strong>Drop CSV here or <u>browse</u></strong>
-                  <small>date, instrument, close · Up to 5 MB</small>
-                </label>
-                <div class="selected-file" id="prices-selected" hidden></div>
-                <div class="file-error" id="prices-error" role="alert"></div>
-                <a class="sample-link" href="./samples/prices.csv" download>Download sample CSV <span aria-hidden="true">↓</span></a>
-              </div>
-              <div class="upload-card" data-kind="rules">
-                <div class="upload-card-head"><span class="file-type-icon json-icon">{ }</span><div><h4>Alert rules</h4><p>JSON rule definitions</p></div></div>
-                <label class="drop-zone" id="rules-drop" for="rules-file" tabindex="0">
-                  <input id="rules-file" type="file" accept=".json,application/json" aria-label="Choose alert rules JSON">
-                  <span class="upload-symbol" aria-hidden="true">↑</span><strong>Drop JSON here or <u>browse</u></strong>
-                  <small>Level and moving-average rules · Up to 5 MB</small>
-                </label>
-                <div class="selected-file" id="rules-selected" hidden></div>
-                <div class="file-error" id="rules-error" role="alert"></div>
-                <a class="sample-link" href="./samples/rules.json" download>Download sample JSON <span aria-hidden="true">↓</span></a>
-              </div>
-            </div>
-            <div class="input-footer"><span id="input-status" class="input-status" aria-live="polite">Load both files to preview your analysis.</span><a href="./samples/rules.json" download>Download sample JSON <span aria-hidden="true">↓</span></a></div>
-          </section>
+      <div id="rule-manager" class="rule-manager">
+        <div id="rules-empty" class="panel empty-state"><h3>No rules loaded</h3><p>Load a rules JSON file or create a rule to configure your analysis.</p><button class="button button-secondary" type="button" data-create-rule>Create a rule</button></div>
+        <div id="rule-cards" class="rule-cards"></div>
+      </div>
+      <div class="guide-grid">
+        <article class="panel guide-card"><span class="guide-index">LEVEL</span><h3>Cross a price level</h3><p><b>Above:</b> previous close at-or-below; current close above.</p><p><b>Below:</b> previous close at-or-above; current close below.</p><p class="guide-footnote">First observation cannot cross. Omitting direction retains Java's either-direction behavior.</p></article>
+        <article class="panel guide-card"><span class="guide-index">MA_CROSS</span><h3>Moving-average crossover</h3><p>Requires full short and long windows. A crossover compares successive full-window averages.</p><p>Observations are sorted per instrument; calendar gaps do not interrupt the sequence.</p><p class="guide-footnote">Official fields are short/long; legacy shortWindow/longWindow aliases work too.</p></article>
+      </div>
+      <dialog id="rule-dialog" aria-labelledby="rule-dialog-title">
+        <form id="rule-form" method="dialog">
+          <div class="dialog-heading"><div><p class="eyebrow">RULE EDITOR</p><h3 id="rule-dialog-title">Create alert rule</h3></div><button id="close-rule-dialog" class="icon-button" type="button" aria-label="Close rule editor">×</button></div>
+          <input name="originalId" type="hidden">
+          <label>Rule ID<input name="id" required maxlength="200"></label>
+          <label>Instrument<input name="instrument" required maxlength="200"></label>
+          <label>Rule type<select name="type"><option value="LEVEL">Price level</option><option value="MA_CROSS">Moving-average crossover</option></select></label>
+          <label>Direction<select name="direction"><option value="">Either direction (legacy-compatible)</option><option value="above">Above</option><option value="below">Below</option></select></label>
+          <label class="level-fields">Price level<input name="level" inputmode="decimal" placeholder="1500.00"></label>
+          <div class="ma-fields"><label>Short window<input name="short" type="number" min="1" step="1"></label><label>Long window<input name="long" type="number" min="2" step="1"></label></div>
+          <p id="rule-form-error" class="file-error" role="alert"></p>
+          <div class="dialog-actions"><button id="cancel-rule" class="button button-secondary" type="button">Cancel</button><button class="button button-primary" type="submit">Save rule</button></div>
+        </form>
+      </dialog>
+      <details class="panel admin-only advanced-panel">
+        <summary>Compatibility notes and engine limits <span>Admin workspace</span></summary>
+        <p>Types and directions are case-insensitive. JSON property names are case-sensitive. Conflicting aliases, unsupported properties, duplicate IDs, and incomplete rules are rejected. Level thresholds can be any valid BigDecimal value; CSV closes must be positive. Browser decimal scale is capped at 10,000.</p>
+        <p>Admin mode is a local interface preference, not authentication or a security boundary.</p>
+      </details>
+    </section>
 
-          <section class="panel preview-panel" aria-labelledby="preview-title">
-            <div class="panel-heading">
-              <div><span class="step-number">02</span><div><h3 id="preview-title">Review inputs</h3><p>Preview parsed observations and normalized rules.</p></div></div>
-              <span id="preview-count" class="subtle-count">Waiting for files</span>
-            </div>
-            <div id="preview-empty" class="preview-empty"><span aria-hidden="true">⌕</span><p>Your validated file previews will appear here.</p></div>
-            <div id="preview-content" class="preview-grid" hidden>
-              <div><h4>Price observations <span id="price-preview-count"></span></h4><div class="table-scroll preview-scroll"><table><thead><tr><th>Date</th><th>Instrument</th><th class="numeric">Close</th></tr></thead><tbody id="price-preview"></tbody></table></div></div>
-              <div><h4>Normalized rules <span id="rule-preview-count"></span></h4><div id="rule-preview" class="rule-list"></div></div>
-            </div>
-            <div class="panel-actions"><button id="run-analysis" class="button button-primary" type="button" disabled><span id="run-label">Run analysis</span><span aria-hidden="true">↗</span></button><span id="analysis-message" class="analysis-message" role="status" aria-live="polite"></span></div>
-          </section>
-
-          <section id="results" class="panel results-panel" aria-labelledby="results-title">
-            <div class="panel-heading results-heading">
-              <div><span class="step-number">03</span><div><h3 id="results-title">Analysis results</h3><p id="results-caption">Run an analysis to reveal verified signals.</p></div></div>
-              <button id="export-alerts" class="button button-secondary button-small" type="button" disabled><span aria-hidden="true">↓</span> Export CSV</button>
-            </div>
-            <div class="result-stats">
-              <div><span>Alerts found</span><strong id="result-alerts">—</strong></div>
-              <div><span>Instruments covered</span><strong id="result-instruments">—</strong></div>
-              <div><span>Rules evaluated</span><strong id="result-rules">—</strong></div>
-              <div><span>Date range</span><strong id="result-range">—</strong></div>
-            </div>
-            <div class="filter-row">
-              <label class="search-box"><span aria-hidden="true">⌕</span><input id="alert-search" type="search" placeholder="Search instrument or rule ID" aria-label="Search alerts by instrument or rule ID"></label>
-              <label class="filter-select-label"><span class="sr-only">Filter by alert type</span><select id="alert-type"><option value="">All alert types</option></select></label>
-              <button id="clear-filters" class="text-button" type="button">Clear filters</button>
-            </div>
-            <div id="alert-table-wrap" class="table-scroll alert-table-wrap">
-              <table id="alert-table" class="alert-table"><thead><tr><th><button class="sort-button" type="button" data-sort="date">Date <span aria-hidden="true">↕</span></button></th><th><button class="sort-button" type="button" data-sort="ruleId">Rule ID <span aria-hidden="true">↕</span></button></th><th>Instrument</th><th>Alert type</th><th>Description</th></tr></thead><tbody id="alert-rows"></tbody></table>
-              <div id="no-alerts" class="empty-state" hidden><span class="empty-icon" aria-hidden="true">✓</span><h4>No alerts detected</h4><p>None of the configured conditions occurred in the supplied historical data. Your files were valid and the analysis completed successfully.</p></div>
-              <div id="no-matches" class="empty-state compact-empty" hidden><h4>No matching alerts</h4><p>Adjust or clear your filters to see the complete result set.</p></div>
-              <div id="results-placeholder" class="empty-state compact-empty"><span class="empty-icon" aria-hidden="true">⌁</span><h4>Results appear here</h4><p>Load valid inputs and run analysis to see actual rule-triggered events.</p></div>
-            </div>
-            <div class="results-footer"><span id="result-visible-count">No result set</span><span>Default order: date ascending, then rule ID</span></div>
-          </section>
+    <section id="analysis" class="page-section" aria-labelledby="analysis-title">
+      <div class="section-title">
+        <div><p class="eyebrow">03 / RESULTS</p><h2 id="analysis-title">Analysis results</h2><p id="results-caption">Run an analysis to reveal computed historical signals.</p></div>
+        <button id="export-alerts" class="button button-secondary" type="button" disabled>Export all alerts (CSV)</button>
+      </div>
+      <div class="result-stats">
+        <div><span>Detected alerts</span><strong id="result-alerts">—</strong></div>
+        <div><span>Instruments covered</span><strong id="result-instruments">—</strong></div>
+        <div><span>Rules evaluated</span><strong id="result-rules">—</strong></div>
+        <div><span>Observation date range</span><strong id="result-range">—</strong></div>
+      </div>
+      <div class="results-layout">
+        <div class="panel result-panel">
+          <div class="filter-grid">
+            <label>Search<input id="alert-search" type="search" placeholder="Instrument, rule ID or text"></label>
+            <label>Instrument<select id="alert-instrument"><option value="">All instruments</option></select></label>
+            <label>Alert type<select id="alert-type"><option value="">All types</option></select></label>
+            <label>From date<input id="alert-date-from" type="date"></label>
+            <label>To date<input id="alert-date-to" type="date"></label>
+            <button id="clear-filters" class="button button-quiet" type="button">Clear filters</button>
+          </div>
+          <div id="alert-table-wrap" class="table-scroll alert-table-wrap">
+            <table id="alert-table" class="alert-table"><thead><tr><th><button class="sort-button" type="button" data-sort="date">Date <span aria-hidden="true">↕</span></button></th><th><button class="sort-button" type="button" data-sort="ruleId">Rule ID <span aria-hidden="true">↕</span></button></th><th>Instrument</th><th>Alert type</th><th>Message</th></tr></thead><tbody id="alert-rows"></tbody></table>
+            <div id="no-alerts" class="empty-state" hidden><h3>No alerts detected</h3><p>Analysis completed successfully, but none of the configured conditions occurred in the supplied historical data.</p></div>
+            <div id="no-matches" class="empty-state" hidden><h3>No matching alerts</h3><p>Change or clear filters. Filtering does not recalculate the analysis.</p></div>
+            <div id="results-placeholder" class="empty-state"><h3>Results appear here</h3><p>Load valid inputs and run analysis to see computed events.</p></div>
+          </div>
+          <div class="results-footer"><span id="result-visible-count">No result set</span><span>Analysis is retained when filters change.</span></div>
         </div>
-
-        <aside class="workspace-aside">
+        <aside class="results-aside">
           <section class="panel chart-panel" aria-labelledby="chart-title">
-            <div class="panel-heading aside-heading"><div><p class="eyebrow">PRICE HISTORY</p><h3 id="chart-title">Close movement</h3></div><label class="chart-select-label"><span class="sr-only">Choose chart instrument</span><select id="chart-instrument" aria-label="Choose chart instrument" disabled><option value="">Select instrument</option></select></label></div>
-            <p id="chart-description" class="chart-description">Choose an instrument after loading price observations.</p>
-            <div id="chart-area" class="chart-area"><div class="chart-placeholder">Actual price observations<br>will be charted here</div></div>
+            <div class="card-heading"><div><p class="eyebrow">OBSERVATIONS</p><h3 id="chart-title">Close-price history</h3></div><label>Instrument<select id="chart-instrument" aria-label="Choose chart instrument" disabled><option value="">Select</option></select></label></div>
+            <p id="chart-description" class="chart-description">Select data to render an actual price series.</p>
+            <div id="chart-area" class="chart-area"><div class="chart-placeholder">Historical closes will appear here.</div></div>
+            <p id="chart-point-detail" class="chart-point-detail" aria-live="polite">Select a chart point to inspect its date and close.</p>
             <div class="chart-legend"><span><i class="legend-price"></i> Closing price</span><span><i class="legend-alert"></i> Alert date</span></div>
           </section>
-          <section class="panel type-panel" aria-labelledby="type-title">
-            <div class="panel-heading aside-heading"><div><p class="eyebrow">SIGNAL BREAKDOWN</p><h3 id="type-title">Alert types</h3></div></div>
-            <div id="type-breakdown" class="breakdown-empty">No computed alerts yet.</div>
-          </section>
-          <section class="panel detail-panel" aria-labelledby="detail-title">
-            <div class="panel-heading aside-heading"><div><p class="eyebrow">TRACEABLE RESULT</p><h3 id="detail-title">Alert detail</h3></div></div>
-            <div id="alert-detail" class="detail-empty">Select an alert row to inspect the rule and observed values.</div>
-          </section>
-          <details id="walkthrough" class="panel walkthrough-panel">
-            <summary><span><b>Demo walkthrough</b><small>A simple presentation flow</small></span><span class="summary-plus" aria-hidden="true">+</span></summary>
-            <ol><li>Load the sample pair to see a small, real dataset.</li><li>Run analysis and inspect each dated alert.</li><li>Select a row to trace the rule and values.</li><li>Upload your own CSV and JSON to repeat.</li></ol>
-          </details>
+          <section class="panel type-panel"><div class="card-heading"><div><p class="eyebrow">BREAKDOWN</p><h3>Alert types</h3></div></div><div id="type-breakdown" class="breakdown-empty">No computed alerts yet.</div></section>
+          <section class="panel detail-panel"><div class="card-heading"><div><p class="eyebrow">TRACEABLE RESULT</p><h3>Selected alert</h3></div><button id="copy-alert" class="button button-quiet button-small" type="button" disabled>Copy details</button></div><div id="alert-detail" class="detail-empty">Select a result row to inspect its rule and observations.</div></section>
         </aside>
       </div>
     </section>
 
-    <section id="rules" class="guide-section page-shell" aria-labelledby="rules-title">
-      <div class="section-heading"><div><p class="eyebrow">TRANSPARENT BY DESIGN</p><h2 id="rules-title">How the rules work</h2></div><p class="section-side-copy">The browser evaluates each observation locally, in date order, separately for each instrument.</p></div>
-      <div class="guide-grid">
-        <article class="panel guide-card"><span class="guide-index">01 / LEVEL</span><h3>Cross a chosen level</h3><p><b>Above:</b> previous close is at or below the level; current close is above.</p><p><b>Below:</b> previous close is at or above the level; current close is below.</p><p class="guide-footnote">A first observation cannot cross. Touching the level alone is not an alert.</p></article>
-        <article class="panel guide-card"><span class="guide-index">02 / MA_CROSS</span><h3>Compare moving averages</h3><p><b>Above:</b> short average moves from at-or-below to above the long average.</p><p><b>Below:</b> short average moves from at-or-above to below the long average.</p><p class="guide-footnote">Both comparison points need full windows. Calendar gaps do not interrupt observation order.</p></article>
-        <article class="panel guide-card schema-card"><span class="guide-index">RULE FORMAT</span><h3>Official JSON shape</h3><pre><code>[
-  {"id":"r1","instrument":"INFY",
-   "type":"level","direction":"below",
-   "level":1500},
-  {"id":"r2","instrument":"TCS",
-   "type":"ma_cross","short":5,
-   "long":20,"direction":"above"}
-]</code></pre><p class="guide-footnote">Legacy threshold and shortWindow/longWindow aliases are also accepted. If both alias names are present, they must agree.</p></article>
-      </div>
-    </section>
-
-    <section id="about" class="about-section page-shell" aria-labelledby="about-title">
-      <div class="about-copy"><p class="eyebrow">ABOUT THIS DEMO</p><h2 id="about-title">A clearer view of<br>configured conditions.</h2><p>Price Alert Studio demonstrates historical rule evaluation from the Price Alert Tool project. It is a separate, client-side JavaScript implementation of the Java CLI logic; the Java JAR does not run in the browser.</p><p class="disclaimer"><strong>Important:</strong> Historical alerts are not predictions, investment advice, or recommendations. A signal only means that a configured condition was present in the supplied data.</p></div>
-      <div class="architecture-card panel"><span class="architecture-mark">LOCAL / STATIC</span><div class="architecture-flow"><span>Your files</span><i>→</i><span>Browser parser</span><i>→</i><span>Rule engine</span><i>→</i><span>Verifiable alerts</span></div><p>No upload server, market feed, analytics, or remote storage. The Java CLI and Maven test suite remain separate.</p></div>
+    <section id="about" class="page-section about-section" aria-labelledby="about-title">
+      <div><p class="eyebrow">TRANSPARENCY</p><h2 id="about-title">Historical signals, not forecasts.</h2><p>Price Alert Studio is a separate client-side JavaScript implementation of the Java CLI. It uses the same rule definitions and matching alert semantics, but the Java JAR does not run in the browser.</p><p><strong>Disclaimer:</strong> Historical rule alerts are not price predictions, investment advice, or recommendations.</p><p>Files are read, parsed, and evaluated locally. There is no upload API, market-data service, database, analytics, or remote storage.</p><a class="inline-link" href="./README.md">Website documentation and limitations</a></div>
+      <div class="panel architecture-card"><p class="eyebrow">SAME INPUTS → SAME ENGINE</p><div class="architecture-flow"><span>CSV + JSON</span><b>→</b><span>Local parse</span><b>→</b><span>Rule engine</span><b>→</b><span>Alerts</span></div><p>Browser engine tests and a shared sample fixture are provided. See the feature-parity checklist for verified behavior and known boundaries.</p></div>
     </section>
   </main>
-
-  <footer class="page-footer page-shell"><a class="footer-brand" href="#overview">PayAttention <span>· Price Alert Studio</span></a><span>Local historical analysis · Not financial advice</span><a href="./README.md">Web demo notes</a></footer>
+  <footer class="page-footer"><span>PayAttention · Price Alert Studio</span><span>Local historical analysis · Not financial advice</span><a href="./FEATURE_PARITY.md">Feature parity</a></footer>
 </body>
 </html>
